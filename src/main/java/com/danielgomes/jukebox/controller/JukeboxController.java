@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,19 +31,19 @@ public class JukeboxController {
     @Autowired
     private JukeboxService jukeboxService;
 
-    @Operation(operationId = "findJukesBySettingId", summary = "Find Jukeboxes by settingId")
+    @Operation(operationId = "findJukeboxes", summary = "Find Jukeboxes")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Success", content = @Content),
             @ApiResponse(responseCode = "400", description = "Bad Request", content = @Content),
             @ApiResponse(responseCode = "404", description = "Jukebox not found.", content = @Content)
     })
     @GetMapping(value = "/jukes", produces = APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> findJukesBySettingId(@RequestParam(name = "settingId") String settingId,
-                                                  @RequestParam(name = "model", required = false) String model,
-                                                  @RequestParam(name = "offset", required = false) Integer offset,
-                                                  @RequestParam(name = "limit", required = false) Integer limit) {
+    public ResponseEntity<?> findJukeboxes(@RequestParam(name = "settingId") String settingId,
+                                           @RequestParam(name = "model", required = false) String model,
+                                           @RequestParam(name = "offset", required = false) Integer offset,
+                                           @RequestParam(name = "limit", required = false) Integer limit) {
 
-        if (Objects.isNull(settingId) || settingId.isBlank()) {
+        if (StringUtils.isEmpty(settingId)) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("The settingId parameter is required.");
         }
 
@@ -51,11 +52,11 @@ public class JukeboxController {
         if (setting.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Collections.emptyList());
 
         List<Jukebox> jukes = jukeboxService.getAllJukes().stream()
-                .filter(j -> ((model == null) || model.isBlank() || j.getModel().equals(model)))
+                .filter(j -> (StringUtils.isEmpty(model) || j.getModel().equals(model)))
                 .filter(j -> j.componentsAsString().containsAll(setting.get().getRequires()))
                 .collect(Collectors.toList());
 
-        if (Objects.nonNull(offset) && Objects.nonNull(limit)) {
+        if (Objects.nonNull(offset) && Objects.nonNull(limit) && (offset > 0) && (limit > 0) && (offset < limit)) {
             int end = Math.min((offset + limit), jukes.size());
             return !jukes.isEmpty() ? ResponseEntity.ok().body(jukes.subList(offset, end)) : ResponseEntity.notFound().build();
         }
